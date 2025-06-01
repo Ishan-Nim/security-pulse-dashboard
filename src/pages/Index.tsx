@@ -22,11 +22,11 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // KPI State
+  // KPI State with proper TypeScript types
   const [kpiData, setKpiData] = useState({
-    activeIncidents: { count: 23, delta: -2, trend: 'down' },
+    activeIncidents: { count: 23, delta: -2, trend: 'down' as 'up' | 'down' | 'stable' },
     exposedEmployees: { count: 156, passwordReuse: 34 },
-    darkWebMentions: { count: 8, weeklyDelta: 3, trend: 'up' },
+    darkWebMentions: { count: 8, weeklyDelta: 3, trend: 'up' as 'up' | 'down' | 'stable' },
     compromisedDomains: { total: 12, atRisk: 4 }
   });
 
