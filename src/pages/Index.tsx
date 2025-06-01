@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCcw, Shield, AlertTriangle, Users, Globe, Database } from 'lucide-react';
+import { RefreshCcw, Shield, AlertTriangle, Users, Globe, Database, Download, Settings, Filter } from 'lucide-react';
 import KPICard from '@/components/dashboard/KPICard';
 import IncidentsSection from '@/components/dashboard/IncidentsSection';
 import EmployeesSection from '@/components/dashboard/EmployeesSection';
@@ -84,6 +84,27 @@ const Index = () => {
     }
   };
 
+  const handleExportData = () => {
+    toast({
+      title: "Export Started",
+      description: "Your security data export is being prepared.",
+    });
+  };
+
+  const handleSettings = () => {
+    toast({
+      title: "Settings",
+      description: "Opening dashboard settings...",
+    });
+  };
+
+  const handleFilterToggle = () => {
+    toast({
+      title: "Filters",
+      description: "Advanced filtering options coming soon.",
+    });
+  };
+
   // Load initial data
   useEffect(() => {
     refreshData();
@@ -114,6 +135,33 @@ const Index = () => {
                 <span className="text-sm text-gray-400">Live Updates</span>
                 <Switch checked={isLiveMode} onCheckedChange={setIsLiveMode} />
               </div>
+              <Button
+                onClick={handleFilterToggle}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 hover:bg-gray-800"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
+              <Button
+                onClick={handleExportData}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 hover:bg-gray-800"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <Button
+                onClick={handleSettings}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 hover:bg-gray-800"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
               <Button
                 onClick={refreshData}
                 disabled={isLoading}
