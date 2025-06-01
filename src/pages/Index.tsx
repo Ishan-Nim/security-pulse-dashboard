@@ -3,11 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCcw, Search, Filter, Bell, AlertTriangle, Shield, Globe, Users, Mail, Database } from 'lucide-react';
+import { RefreshCcw, Shield, AlertTriangle, Users, Globe, Database } from 'lucide-react';
 import KPICard from '@/components/dashboard/KPICard';
 import IncidentsSection from '@/components/dashboard/IncidentsSection';
 import EmployeesSection from '@/components/dashboard/EmployeesSection';
@@ -15,6 +14,7 @@ import DarkWebSection from '@/components/dashboard/DarkWebSection';
 import DomainsSection from '@/components/dashboard/DomainsSection';
 import EmailsSection from '@/components/dashboard/EmailsSection';
 import InfectionsSection from '@/components/dashboard/InfectionsSection';
+import { socRadarService } from '@/lib/socRadarService';
 
 const Index = () => {
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -24,27 +24,55 @@ const Index = () => {
 
   // KPI State with proper TypeScript types
   const [kpiData, setKpiData] = useState({
-    activeIncidents: { count: 23, delta: -2, trend: 'down' as 'up' | 'down' | 'stable' },
-    exposedEmployees: { count: 156, passwordReuse: 34 },
-    darkWebMentions: { count: 8, weeklyDelta: 3, trend: 'up' as 'up' | 'down' | 'stable' },
-    compromisedDomains: { total: 12, atRisk: 4 }
+    activeIncidents: { count: 0, delta: 0, trend: 'stable' as 'up' | 'down' | 'stable' },
+    exposedEmployees: { count: 0, passwordReuse: 0 },
+    darkWebMentions: { count: 0, weeklyDelta: 0, trend: 'stable' as 'up' | 'down' | 'stable' },
+    compromisedDomains: { total: 0, atRisk: 0 }
   });
 
   const refreshData = async () => {
     setIsLoading(true);
     try {
-      // Simulate API calls to backend proxy
-      console.log('Refreshing SOC Radar data...');
+      console.log('Refreshing SOC Radar data from API...');
       
-      // In production, these would be actual API calls
-      setTimeout(() => {
-        setLastUpdated(new Date());
-        setIsLoading(false);
-        toast({
-          title: "Data Refreshed",
-          description: "SOC Radar data has been updated successfully.",
-        });
-      }, 1500);
+      // Fetch real data from SOC Radar API
+      const [incidents, employees, darkWeb, domains] = await Promise.all([
+        socRadarService.getIncidents(),
+        socRadarService.getEmployeeExposure(),
+        socRadarService.getDarkWebMentions(),
+        socRadarService.getCompromisedDomains()
+      ]);
+
+      console.log('Fetched data:', { incidents, employees, darkWeb, domains });
+
+      // Update KPI data with real values
+      setKpiData({
+        activeIncidents: { 
+          count: incidents.total, 
+          delta: incidents.delta,
+          trend: incidents.delta > 0 ? 'up' as 'up' | 'down' | 'stable' : incidents.delta < 0 ? 'down' as 'up' | 'down' | 'stable' : 'stable' as 'up' | 'down' | 'stable'
+        },
+        exposedEmployees: { 
+          count: employees.total, 
+          passwordReuse: employees.password_reuse_percentage 
+        },
+        darkWebMentions: { 
+          count: darkWeb.total, 
+          weeklyDelta: darkWeb.weekly_delta,
+          trend: darkWeb.weekly_delta > 0 ? 'up' as 'up' | 'down' | 'stable' : darkWeb.weekly_delta < 0 ? 'down' as 'up' | 'down' | 'stable' : 'stable' as 'up' | 'down' | 'stable'
+        },
+        compromisedDomains: { 
+          total: domains.total, 
+          atRisk: domains.at_risk 
+        }
+      });
+
+      setLastUpdated(new Date());
+      setIsLoading(false);
+      toast({
+        title: "Data Refreshed",
+        description: "SOC Radar data has been updated successfully.",
+      });
     } catch (error) {
       console.error('Error refreshing data:', error);
       setIsLoading(false);
@@ -55,6 +83,11 @@ const Index = () => {
       });
     }
   };
+
+  // Load initial data
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   useEffect(() => {
     if (isLiveMode) {
@@ -73,7 +106,7 @@ const Index = () => {
               <Shield className="h-8 w-8 text-blue-400" />
               <h1 className="text-2xl font-bold">SOC Radar Dashboard</h1>
               <Badge variant="outline" className="text-green-400 border-green-400">
-                ACTIVE
+                LIVE DATA
               </Badge>
             </div>
             <div className="flex items-center space-x-4">
