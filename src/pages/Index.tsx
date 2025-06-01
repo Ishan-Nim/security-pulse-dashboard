@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCcw, Shield, AlertTriangle, Users, Globe, Database, Download, Settings, Filter } from 'lucide-react';
+import { RefreshCcw, Shield, AlertTriangle, Users, Globe, Database, Download, Settings, Filter, Wifi, WifiOff } from 'lucide-react';
 import KPICard from '@/components/dashboard/KPICard';
 import IncidentsSection from '@/components/dashboard/IncidentsSection';
 import EmployeesSection from '@/components/dashboard/EmployeesSection';
@@ -20,6 +20,7 @@ const Index = () => {
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
+  const [apiConnected, setApiConnected] = useState(true);
   const { toast } = useToast();
 
   // KPI State with proper TypeScript types
@@ -45,6 +46,10 @@ const Index = () => {
 
       console.log('Fetched data:', { incidents, employees, darkWeb, domains });
 
+      // Check if we're getting real data or fallback data
+      const hasRealData = incidents.total > 0 || employees.total > 0 || darkWeb.total > 0 || domains.total > 0;
+      setApiConnected(hasRealData);
+
       // Update KPI data with real values
       setKpiData({
         activeIncidents: { 
@@ -69,16 +74,26 @@ const Index = () => {
 
       setLastUpdated(new Date());
       setIsLoading(false);
-      toast({
-        title: "Data Refreshed",
-        description: "SOC Radar data has been updated successfully.",
-      });
+      
+      if (apiConnected) {
+        toast({
+          title: "Data Refreshed",
+          description: "SOC Radar data has been updated successfully.",
+        });
+      } else {
+        toast({
+          title: "API Connection Issue",
+          description: "Unable to connect to SOC Radar API. Check your API key and network connection.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error refreshing data:', error);
       setIsLoading(false);
+      setApiConnected(false);
       toast({
         title: "Error",
-        description: "Failed to refresh data. Please try again.",
+        description: "Failed to refresh data. Please check your SOC Radar API connection.",
         variant: "destructive",
       });
     }
@@ -126,9 +141,23 @@ const Index = () => {
             <div className="flex items-center space-x-4">
               <Shield className="h-8 w-8 text-blue-400" />
               <h1 className="text-2xl font-bold">SOC Radar Dashboard</h1>
-              <Badge variant="outline" className="text-green-400 border-green-400">
-                LIVE DATA
-              </Badge>
+              <div className="flex items-center space-x-2">
+                {apiConnected ? (
+                  <>
+                    <Wifi className="h-4 w-4 text-green-400" />
+                    <Badge variant="outline" className="text-green-400 border-green-400">
+                      LIVE DATA
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-4 w-4 text-red-400" />
+                    <Badge variant="outline" className="text-red-400 border-red-400">
+                      API DISCONNECTED
+                    </Badge>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
@@ -179,6 +208,20 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* API Connection Warning */}
+      {!apiConnected && (
+        <div className="bg-red-900/20 border-b border-red-900/30">
+          <div className="container mx-auto px-6 py-3">
+            <div className="flex items-center space-x-2 text-red-400">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm">
+                SOC Radar API connection failed. Displaying fallback data. Please check your API key and try refreshing.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Dashboard */}
       <div className="container mx-auto px-6 py-6">

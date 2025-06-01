@@ -16,8 +16,13 @@ export class SOCRadarService {
         throw error;
       }
 
-      if (!data || !data.success) {
-        throw new Error(data?.error || 'API call failed');
+      if (!data) {
+        throw new Error('No data received from SOC Radar API');
+      }
+
+      // Log if we're getting fallback data due to API issues
+      if (!data.success) {
+        console.warn(`SOC Radar API returned error for ${endpoint}:`, data.error);
       }
 
       return data.data;

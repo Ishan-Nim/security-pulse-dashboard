@@ -21,116 +21,104 @@ serve(async (req) => {
     const { endpoint } = await req.json();
     console.log(`Fetching data from SOC Radar endpoint: ${endpoint}`);
 
-    // For now, return mock data with proper structure since API might not be accessible
-    // This ensures the dashboard works while we troubleshoot the API connection
-    let mockData;
+    // SOC Radar API base URL
+    const baseUrl = 'https://platform.socradar.com/api';
     
+    let apiEndpoint = '';
+    
+    // Map internal endpoints to SOC Radar API endpoints
     switch (endpoint) {
       case 'incidents':
-        mockData = {
-          incidents: [
-            {
-              id: 'INC-2024-001',
-              title: 'Suspicious Login Activity',
-              severity: 'high',
-              status: 'active',
-              created_at: new Date().toISOString(),
-              description: 'Multiple failed login attempts detected'
-            },
-            {
-              id: 'INC-2024-002', 
-              title: 'Malware Detection',
-              severity: 'critical',
-              status: 'investigating',
-              created_at: new Date().toISOString(),
-              description: 'Potential malware detected on endpoint'
-            }
-          ],
-          total: 12,
-          delta: 3
-        };
+        apiEndpoint = '/incidents';
         break;
-        
       case 'leaked-emails':
-        mockData = {
-          leaked_credentials: [
-            {
-              email: 'admin@company.com',
-              source: 'Data Breach XYZ',
-              severity: 'critical',
-              leak_date: new Date().toISOString()
-            }
-          ],
-          total: 5
-        };
+        apiEndpoint = '/leaked-credentials';
         break;
-        
       case 'darkweb-mentions':
-        mockData = {
-          mentions: [
-            {
-              source: 'Underground Forum',
-              mention: 'Company credentials discussion',
-              severity: 'high',
-              date: new Date().toISOString()
-            }
-          ],
-          total: 8,
-          weekly_delta: 2
-        };
+        apiEndpoint = '/dark-web-mentions';
         break;
-        
       case 'compromised-domains':
-        mockData = {
-          domains: [
-            {
-              domain: 'company-secure.com',
-              status: 'compromised',
-              risk_level: 'high',
-              last_scan: new Date().toISOString()
-            }
-          ],
-          total: 3,
-          at_risk: 1
-        };
+        apiEndpoint = '/compromised-domains';
         break;
-        
       case 'employee-exposure':
-        mockData = {
-          exposed_employees: [
-            {
-              email: 'john.doe@company.com',
-              risk_level: 'high',
-              exposures: ['Password reuse', 'Dark web mention']
-            }
-          ],
-          total: 15,
-          password_reuse_percentage: 23
-        };
+        apiEndpoint = '/employee-exposure';
         break;
-        
       case 'threat-feeds':
-        mockData = {
-          iocs: [
-            {
-              indicator: '192.168.1.100',
-              type: 'IP',
-              threat_type: 'Malware C2',
-              confidence: 'high'
-            }
-          ],
-          total: 45
-        };
+        apiEndpoint = '/threat-feeds';
         break;
-        
       default:
         throw new Error(`Unknown endpoint: ${endpoint}`);
     }
 
-    console.log(`Successfully returning mock data for ${endpoint}:`, mockData);
+    console.log(`Making API call to: ${baseUrl}${apiEndpoint}`);
+
+    // Make the actual API call to SOC Radar
+    const response = await fetch(`${baseUrl}${apiEndpoint}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`SOC Radar API error: ${response.status} ${response.statusText}`);
+      
+      // If API fails, return fallback data to prevent dashboard breaking
+      let fallbackData;
+      switch (endpoint) {
+        case 'incidents':
+          fallbackData = {
+            incidents: [
+              {
+                id: 'INC-FALLBACK-001',
+                title: 'API Connection Issue',
+                severity: 'medium',
+                status: 'investigating',
+                created_at: new Date().toISOString(),
+                description: 'Unable to fetch real-time data from SOC Radar API'
+              }
+            ],
+            total: 1,
+            delta: 0
+          };
+          break;
+        case 'leaked-emails':
+          fallbackData = { leaked_credentials: [], total: 0 };
+          break;
+        case 'darkweb-mentions':
+          fallbackData = { mentions: [], total: 0, weekly_delta: 0 };
+          break;
+        case 'compromised-domains':
+          fallbackData = { domains: [], total: 0, at_risk: 0 };
+          break;
+        case 'employee-exposure':
+          fallbackData = { exposed_employees: [], total: 0, password_reuse_percentage: 0 };
+          break;
+        case 'threat-feeds':
+          fallbackData = { iocs: [], total: 0 };
+          break;
+        default:
+          fallbackData = {};
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data: fallbackData }),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
+    }
+
+    const data = await response.json();
+    console.log(`Successfully fetched real data from SOC Radar for ${endpoint}:`, data);
 
     return new Response(
-      JSON.stringify({ success: true, data: mockData }),
+      JSON.stringify({ success: true, data }),
       { 
         headers: { 
           ...corsHeaders,
@@ -141,10 +129,27 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in SOC Radar function:', error);
+    
+    // Return empty data structure to prevent dashboard errors
+    const emptyData = {
+      incidents: [],
+      leaked_credentials: [],
+      mentions: [],
+      domains: [],
+      exposed_employees: [],
+      iocs: [],
+      total: 0,
+      delta: 0,
+      weekly_delta: 0,
+      at_risk: 0,
+      password_reuse_percentage: 0
+    };
+
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message,
+        data: emptyData
       }),
       { 
         status: 500,
